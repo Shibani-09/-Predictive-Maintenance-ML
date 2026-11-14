@@ -1,0 +1,11 @@
+﻿streamlit
+pymongo
+python-dotenv
+passlib[bcrypt]
+pymysql
+joblib==1.5.3
+matplotlib==3.11.1
+numpy==2.5.1
+pandas==3.0.5
+scikit-learn==1.9.0
+xgboost==3.4.0
