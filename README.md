@@ -293,8 +293,6 @@ Predictive-Maintenance-ML/
 │   ├── feature_columns.pkl
 │   └── random_forest_rul_model.pkl
 │
-├── notebooks/
-│
 ├── outputs/
 │   ├── charts/
 │   ├── predictions/
