@@ -4,10 +4,10 @@
   <strong>Machine Learning | Random Forest | Streamlit | MongoDB Atlas</strong>
 </p>
 
-An interactive machine learning application that estimates the Remaining Useful Life (RUL) of turbofan engines using the NASA C-MAPSS FD001 dataset. The system combines a trained Random Forest regression model, an interactive Streamlit dashboard, historical engine analysis, and simulated engine monitoring.
+An interactive machine learning application that estimates the Remaining Useful Life (RUL) of turbofan engines using the NASA C-MAPSS FD001 dataset. This project combines a trained Random Forest regression model, an interactive Streamlit dashboard, historical engine analysis, and simulated engine monitoring.
 
-**Author:** Shibani Mukherjee  
-**Project Repository:** [Predictive-Maintenance-ML](https://github.com/Shibani-09/-Predictive-Maintenance-ML)
+**Project Type:** Academic Group Project  
+**Repository:** [Predictive-Maintenance-ML](https://github.com/Shibani-09/-Predictive-Maintenance-ML)
 
 > **Monitoring scope:** The monitoring module replays historical records from the processed NASA dataset. It does not connect to physical industrial equipment, live sensors, or IoT devices.
 
@@ -90,7 +90,7 @@ MongoDB Atlas is used for application account storage.
 
 ```mermaid
 flowchart TD
-    A[User] --> B[Streamlit Interface]
+    A[Users] --> B[Streamlit Interface]
 
     B --> C[Python Application Services]
 
@@ -442,12 +442,9 @@ Potential improvements for future development include:
 
 These are proposed future improvements and are not represented as currently implemented features.
 
-## 18. Author
+## 18. Project Contributors
 
-**Shibani Mukherjee**
-
-- GitHub Profile: [Shibani-09](https://github.com/Shibani-09)
-- Project Repository: [Predictive-Maintenance-ML](https://github.com/Shibani-09/-Predictive-Maintenance-ML)
+This project was developed collaboratively as an academic group project. The work involved project planning, dataset preparation, machine learning development, application implementation, database integration, testing, and documentation.
 
 ## 19. Acknowledgements
 
@@ -455,11 +452,11 @@ These are proposed future improvements and are not represented as currently impl
 - **Python Open-Source Community:** For the libraries and tools used in data processing, machine learning, visualization, and application development.
 - **Streamlit:** For providing the framework used to develop the interactive dashboard.
 
-Dataset Reference: [NASA Prognostics Data Repository](https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/)
+**Dataset Reference:** [NASA Prognostics Data Repository](https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/)
 
 ---
 
 <p align="center">
   <strong>Predictive Maintenance of Industrial Equipment Using Machine Learning</strong><br>
-  Developed by Shibani Mukherjee
+  Academic Group Project
 </p>
