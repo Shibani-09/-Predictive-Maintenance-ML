@@ -4,7 +4,7 @@
   <strong>Machine Learning | Random Forest | Streamlit | MongoDB Atlas</strong>
 </p>
 
-An interactive machine learning application that estimates the Remaining Useful Life (RUL) of turbofan engines using the NASA C-MAPSS FD001 dataset. This project combines a trained Random Forest regression model, an interactive Streamlit dashboard, historical engine analysis, and simulated engine monitoring.
+An interactive machine learning application that estimates the Remaining Useful Life (RUL) of turbofan engines using the NASA C-MAPSS FD001 dataset. This project combines a trained Random Forest regression model, an interactive Streamlit dashboard, CSV-based instant prediction, historical engine analysis, and simulated engine monitoring.
 
 **Project Type:** Academic Group Project  
 **Repository:** [Predictive-Maintenance-ML](https://github.com/Shibani-09/-Predictive-Maintenance-ML)
@@ -21,7 +21,9 @@ Remaining Useful Life (RUL) estimates the number of operating cycles an engine m
 
 This project applies supervised machine learning to historical engine operating settings and sensor-derived features from the NASA C-MAPSS FD001 dataset.
 
-A trained Random Forest regression model estimates engine RUL in operating cycles. The Streamlit application presents these predictions through an interactive dashboard with engine-level analysis, model evaluation results, and simulated monitoring.
+A trained Random Forest regression model estimates engine RUL in operating cycles. The Streamlit application presents these predictions through an interactive dashboard with engine-level analysis, CSV-based prediction, model evaluation results, and simulated monitoring.
+
+The application also allows users to upload new engine sensor data in CSV format and generate predictions using the existing trained model without retraining it.
 
 ## 2. Problem Statement
 
@@ -29,11 +31,15 @@ Traditional maintenance approaches often depend on fixed maintenance schedules o
 
 This project explores how machine learning can use historical engine degradation patterns to estimate Remaining Useful Life and provide an accessible interface for examining engine health.
 
+It also introduces an upload-based prediction workflow that allows users to submit new sensor records and obtain RUL estimates without manually modifying the existing dataset.
+
 ## 3. Project Objectives
 
 - Prepare engine-cycle records and RUL targets using the NASA C-MAPSS FD001 dataset.
 - Use a trained Random Forest regression model to estimate Remaining Useful Life.
 - Develop an interactive Streamlit application for engine-level predictions.
+- Allow users to upload new raw sensor CSV files and generate instant RUL predictions.
+- Validate uploaded data before processing and prediction.
 - Present saved machine learning evaluation results and visualizations.
 - Implement simulated engine monitoring using historical test records.
 - Integrate MongoDB Atlas for application user account storage.
@@ -45,6 +51,11 @@ This project explores how machine learning can use historical engine degradation
 | User Authentication | Account registration and login with bcrypt password hashing. |
 | Home Dashboard | Displays application, model, dataset, and MongoDB status. |
 | Engine Prediction | Estimates RUL using the latest processed record of a selected test engine. |
+| CSV Upload and Instant Prediction | Allows users to upload new raw engine sensor data and generate RUL predictions using the existing trained model. |
+| CSV Data Validation | Checks uploaded file structure, required columns, missing values, and invalid data. |
+| Dataset Preview | Displays uploaded CSV records before prediction. |
+| Batch Engine Prediction | Generates predictions for multiple engines contained in an uploaded CSV file. |
+| Prediction Download | Allows users to download prediction results as a CSV file. |
 | Sensor Trend Analysis | Displays historical sensor trends for a selected engine and sensor channel. |
 | Simulated Monitoring | Replays engine records cycle by cycle and generates predictions for selected records. |
 | Model Performance | Presents saved evaluation metrics, dataset summaries, and model visualizations. |
@@ -102,16 +113,23 @@ flowchart TD
 
     E --> H[Saved Random Forest Model]
     E --> I[Processed FD001 Features]
+    E --> J[Uploaded CSV Data]
+
+    J --> K[CSV Validation]
+    K --> L[Feature Engineering]
+    L --> E
 
     F --> I
 
-    J[Raw NASA FD001 Dataset] --> K[Data Processing and Feature Engineering]
-    K --> I
+    M[Raw NASA FD001 Dataset] --> N[Data Processing and Feature Engineering]
+    N --> I
 ```
 
 The Streamlit application directly uses Python modules. A separate REST API backend is not part of the final application architecture.
 
 ## 7. Application Workflow
+
+### Existing Dataset Prediction Workflow
 
 1. **Dataset Preparation:** Raw NASA FD001 training, testing, and RUL files are processed to generate the required features.
 2. **Model Development:** A trained Random Forest model and its feature-column configuration are saved as model artifacts.
@@ -120,6 +138,20 @@ The Streamlit application directly uses Python modules. A separate REST API back
 5. **RUL Prediction:** The prediction service selects the appropriate processed record, arranges the input features in the saved model-column order, and generates an RUL estimate.
 6. **Health Classification:** The predicted RUL is mapped to an application-defined health category.
 7. **Monitoring Simulation:** Users can replay historical engine records and view predictions for selected cycles.
+
+### New CSV Upload Prediction Workflow
+
+1. **CSV Upload:** The user uploads a new raw engine sensor CSV file through the Engine Prediction page.
+2. **Data Preview:** The application displays the uploaded dataset for inspection.
+3. **Data Validation:** The system checks the expected C-MAPSS columns, data types, missing values, and valid engine-cycle records.
+4. **Feature Engineering:** The uploaded raw sensor data is processed using the existing feature engineering functions.
+5. **Feature Alignment:** The generated features are arranged according to the saved model feature-column configuration.
+6. **Instant Prediction:** The existing trained Random Forest model generates predictions for the latest available cycle of each engine.
+7. **Health Classification:** Each predicted RUL value is mapped to a health category.
+8. **Result Display:** The application displays engine IDs, predicted RUL values, and health status.
+9. **CSV Download:** Users can download the generated prediction results.
+
+The uploaded CSV workflow uses the existing trained model. It does not retrain the model during file upload or prediction.
 
 ## 8. Dataset Description
 
@@ -166,7 +198,70 @@ The processed files are:
 
 The Streamlit application uses these prepared files rather than repeating feature engineering during each dashboard request.
 
-## 9. Machine Learning Model
+## 9. CSV Upload and Instant RUL Prediction
+
+The application includes an additional CSV upload feature that allows users to provide new raw engine sensor data and obtain RUL predictions.
+
+This feature is available through the **Engine Prediction** page.
+
+### Supported CSV Format
+
+The upload feature accepts headered raw C-MAPSS-format CSV files.
+
+The expected 26 columns are:
+
+- `engine_id`
+- `cycle`
+- `setting_1`
+- `setting_2`
+- `setting_3`
+- `sensor_1` through `sensor_21`
+
+Each engine must have at least five observations, with its latest five cycles consecutive, to support the implemented rolling-feature validation.
+
+The uploaded file must contain the expected columns and valid sensor data. Missing, unexpected, non-numeric, or invalid values are rejected with validation feedback.
+
+### CSV Processing
+
+After upload, the application:
+
+1. Reads the CSV file using Pandas.
+2. Validates the expected column structure and sensor values.
+3. Checks engine identifiers and cycle information.
+4. Reuses the existing rolling-feature and change-feature calculations.
+5. Generates the required 64 model input features.
+6. Aligns the features with the saved `feature_columns.pkl` configuration.
+7. Selects the latest available record for each engine.
+8. Generates predictions using the existing Random Forest model.
+
+### Prediction Results
+
+The application displays the prediction results in a Streamlit table.
+
+The results include:
+
+- Engine ID
+- Predicted Remaining Useful Life
+- Engine health classification
+
+Users can also download the generated prediction results as a CSV file.
+
+### Functions Used
+
+| Function | File | Purpose |
+|---|---|---|
+| `load_uploaded_sensor_csv()` | `streamlit_app/services/ml_service.py` | Reads the uploaded CSV file. |
+| `validate_uploaded_sensor_data()` | `streamlit_app/services/ml_service.py` | Validates the uploaded sensor dataset. |
+| `add_rolling_features()` | `src/feature_engineering.py` | Calculates rolling sensor statistics. |
+| `add_change_features()` | `src/feature_engineering.py` | Calculates sensor changes between cycles. |
+| `load_feature_columns()` | `streamlit_app/services/ml_service.py` | Loads the saved model feature-column configuration. |
+| `predict_uploaded_engines()` | `streamlit_app/services/ml_service.py` | Processes uploaded engine data and generates predictions. |
+| `predict_rul()` | `streamlit_app/services/ml_service.py` | Uses the existing trained model to predict RUL. |
+| `classify_engine_health()` | `streamlit_app/pages/engine_prediction.py` | Classifies engine health based on predicted RUL. |
+
+**Important:** This feature performs prediction using newly uploaded historical sensor records. It does not establish a live sensor or IoT connection, and it does not retrain the Random Forest model.
+
+## 10. Machine Learning Model
 
 The application uses a previously trained **Random Forest Regressor** to estimate Remaining Useful Life.
 
@@ -181,17 +276,17 @@ Both artifacts are loaded using Joblib and cached within the Streamlit applicati
 
 ### Prediction Process
 
-1. The user selects a test engine.
-2. The application retrieves the engine's processed records.
-3. For the engine prediction page, the latest available processed record is selected.
-4. For simulated monitoring, the selected historical cycle record is used.
+1. The user selects a test engine or uploads new sensor data.
+2. The application retrieves the relevant processed or uploaded engine records.
+3. For the existing engine prediction page, the latest available processed record is selected.
+4. For uploaded CSV data, the latest available cycle of each engine is selected after validation and feature engineering.
 5. Input features are arranged according to the saved feature-column configuration.
 6. The trained Random Forest model generates an RUL estimate.
 7. The application clamps negative predictions to zero and displays the result in operating cycles.
 
-The application uses the saved model for prediction. It does not retrain the model when launched.
+The application uses the saved model for prediction. It does not retrain the model when launched or when a user uploads a CSV file.
 
-## 10. Model Evaluation and Performance
+## 11. Model Evaluation and Performance
 
 The project includes saved evaluation results comparing Random Forest and XGBoost regression models.
 
@@ -230,17 +325,18 @@ The `outputs/charts/` directory includes:
 - Prediction error distribution
 - Engine RUL prediction visualization
 
-## 11. Application Modules and Dashboard Pages
+## 12. Application Modules and Dashboard Pages
 
 | Module | Functionality |
 |---|---|
 | Home Dashboard | Displays MongoDB status, model availability, test-engine count, and saved Random Forest metrics. |
 | Engine Prediction | Selects a test engine, generates an RUL prediction, and displays historical sensor trends. |
+| CSV Upload Prediction | Accepts new raw engine sensor CSV files, validates them, generates RUL predictions, and provides downloadable results. |
 | Model Performance | Displays processed dataset summaries, saved evaluation results, and visualizations. |
 | Simulated Engine Monitoring | Replays selected engine test records and generates predictions for selected cycles. |
 | Authentication Service | Handles registration, login, bcrypt password hashing, and account lockout after three failed login attempts. |
 | Database Service | Connects to MongoDB Atlas and provides access to the users collection. |
-| ML Service | Loads model artifacts and processed test data, prepares prediction inputs, and generates RUL estimates. |
+| ML Service | Loads model artifacts and processed test data, validates uploaded sensor data, prepares prediction inputs, and generates RUL estimates. |
 
 ### Additional Power BI Report
 
@@ -254,7 +350,7 @@ It uses the prepared reporting dataset:
 
 These are additional reporting artifacts and are separate from the Streamlit application's runtime workflow.
 
-## 12. MongoDB Atlas Integration
+## 13. MongoDB Atlas Integration
 
 MongoDB Atlas is used as the application's database for user account management.
 
@@ -274,7 +370,7 @@ A separate migration utility is available at:
 
 This is a legacy account-migration utility and is not part of the active Streamlit application workflow.
 
-## 13. Project Directory Structure
+## 14. Project Directory Structure
 
 ```text
 Predictive-Maintenance-ML/
@@ -340,7 +436,7 @@ Predictive-Maintenance-ML/
 └── requirements.txt
 ```
 
-## 14. Installation and Setup
+## 15. Installation and Setup
 
 Follow these instructions to run the project on a Windows system.
 
@@ -358,9 +454,9 @@ Initialize Git LFS and clone the repository:
 ```powershell
 git lfs install
 
-git clone https://github.com/Shibani-09/-Predictive-Maintenance-ML.git
+git clone https://github.com/Shibani-09/-Predictive-Maintenance-ML.git Predictive-Maintenance-ML
 
-cd -Predictive-Maintenance-ML
+cd Predictive-Maintenance-ML
 
 git lfs pull
 ```
@@ -400,7 +496,7 @@ Replace the placeholder values with your actual configuration.
 
 **Security reminder:** Never upload your `.env` file, database credentials, passwords, or connection strings to GitHub.
 
-## 15. Running the Application
+## 16. Running the Application
 
 After installing dependencies and configuring MongoDB Atlas, run the following command from the project root:
 
@@ -418,9 +514,11 @@ http://localhost:8501
 
 The application loads the existing trained model, feature configuration, and processed dataset. Model training is not performed when the application starts.
 
-## 16. Limitations
+## 17. Limitations
 
 - The monitoring module replays historical FD001 test records rather than receiving live industrial sensor data.
+- CSV upload supports the specified raw C-MAPSS-format sensor data, not arbitrary CSV formats.
+- Each uploaded engine must satisfy the implemented minimum history and consecutive-cycle validation requirements.
 - The project currently focuses on the NASA C-MAPSS FD001 dataset.
 - Model performance may differ when applied to other equipment, operating conditions, or datasets.
 - The reported evaluation metrics are saved validation results and do not guarantee real-world performance.
@@ -428,7 +526,7 @@ The application loads the existing trained model, feature configuration, and pro
 - MongoDB Atlas connectivity is required for database-dependent authentication functionality.
 - RUL estimates and health classifications are decision-support indicators and should not replace qualified maintenance decisions.
 
-## 17. Future Scope
+## 18. Future Scope
 
 Potential improvements for future development include:
 
@@ -442,11 +540,11 @@ Potential improvements for future development include:
 
 These are proposed future improvements and are not represented as currently implemented features.
 
-## 18. Project Contributors
+## 19. Project Contributors
 
 This project was developed collaboratively as an academic group project. The work involved project planning, dataset preparation, machine learning development, application implementation, database integration, testing, and documentation.
 
-## 19. Acknowledgements
+## 20. Acknowledgements
 
 - **NASA Prognostics Center of Excellence:** For providing the C-MAPSS turbofan engine degradation dataset.
 - **Python Open-Source Community:** For the libraries and tools used in data processing, machine learning, visualization, and application development.
