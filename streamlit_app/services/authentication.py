@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from passlib.context import CryptContext
 from pymongo.errors import DuplicateKeyError
 
-from streamlit_app.services.database import get_users_collection
+from services.database import get_users_collection
 
 
 # Password hashing configuration
@@ -114,3 +114,4 @@ def authenticate_user(email, password):
         "full_name": user.get("full_name", ""),
         "email": user.get("email", "")
     }
+
