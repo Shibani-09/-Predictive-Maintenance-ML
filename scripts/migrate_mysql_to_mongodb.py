@@ -136,8 +136,11 @@ def migrate_users():
             print("SUCCESS: All accounts are present in MongoDB.")
 
     except Exception as error:
-        print("\nMIGRATION FAILED:", str(error))
-        raise
+        error_type = type(error).__name__
+        print(f"\nMIGRATION FAILED ({error_type}); details suppressed.")
+        raise RuntimeError(
+            f"User migration failed ({error_type}); details were suppressed."
+        ) from None
 
     finally:
         if mysql_connection:

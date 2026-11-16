@@ -1,26 +1,45 @@
 
+import sys
+from pathlib import Path
+
+# --------------------------------------------------
+# PROJECT ROOT CONFIGURATION
+# --------------------------------------------------
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+if not sys.path or Path(sys.path[0] or ".").resolve() != PROJECT_ROOT:
+    if str(PROJECT_ROOT) in sys.path:
+        sys.path.remove(str(PROJECT_ROOT))
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+
+# --------------------------------------------------
+# IMPORTS
+# --------------------------------------------------
+
 import streamlit as st
 import pandas as pd
 import matplotlib as mpl
-from pathlib import Path
 
-from services.database import get_database
-from services.authentication import register_user, authenticate_user
-from services.ml_service import (
+from streamlit_app.services.database import get_database
+from streamlit_app.services.authentication import (
+    authenticate_user,
+    register_user,
+)
+from streamlit_app.services.ml_service import (
     load_feature_columns,
     load_model,
     load_test_dataset,
 )
-from pages.engine_prediction import show_engine_prediction
-from pages.model_performance import show_model_performance
-from pages.realtime_monitoring import show_realtime_monitoring
+from streamlit_app.pages.engine_prediction import show_engine_prediction
+from streamlit_app.pages.model_performance import show_model_performance
+from streamlit_app.pages.realtime_monitoring import show_realtime_monitoring
 
 
 # --------------------------------------------------
-# PROJECT CONFIGURATION
+# PAGE CONFIGURATION
 # --------------------------------------------------
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 st.set_page_config(
     page_title="Predictive Maintenance",
@@ -142,7 +161,6 @@ st.markdown("""
     div[data-testid="stMetric"] {
         min-height: 112px;
         padding: 1.15rem 1.3rem;
-        
         background: #FFFFFF;
         border: 1px solid #DFE7F2;
         border-left: 4px solid #1769E8;
@@ -389,9 +407,10 @@ def show_authentication():
                         else:
                             st.error(message)
 
-                    except Exception as error:
+                    except Exception:
                         st.error(
-                            f"Login failed. Please try again. {error}"
+                            "Login failed due to a system error. "
+                            "Check the MongoDB configuration and connection."
                         )
 
     # REGISTRATION
@@ -457,9 +476,10 @@ def show_authentication():
                         else:
                             st.error(message)
 
-                    except Exception as error:
+                    except Exception:
                         st.error(
-                            f"Registration failed. Please try again. {error}"
+                            "Registration failed due to a system error. "
+                            "Check the MongoDB configuration and connection."
                         )
 
     st.divider()
@@ -512,9 +532,11 @@ def show_dashboard():
     if selected_page == "Engine Prediction":
         show_engine_prediction()
         return
+
     if selected_page == "Model Performance":
         show_model_performance()
         return
+
     if selected_page == "Realtime Monitoring":
         show_realtime_monitoring()
         return
@@ -539,8 +561,11 @@ def show_dashboard():
         user_count = db["users"].count_documents({})
         database_status = "Connected"
 
-    except Exception as error:
-        st.error(f"MongoDB connection failed: {error}")
+    except Exception:
+        st.error(
+            "MongoDB connection failed. Check the configured secrets "
+            "and database availability."
+        )
 
     # Project resources
     model_path = PROJECT_ROOT / "models" / "random_forest_rul_model.pkl"
@@ -571,14 +596,17 @@ def show_dashboard():
 
     evaluation_metrics = {}
     metrics_path = PROJECT_ROOT / "outputs" / "final_model_metrics.csv"
+
     if metrics_path.exists():
         try:
             metrics_df = pd.read_csv(metrics_path)
+
             if {"Metric", "Value"}.issubset(metrics_df.columns):
                 evaluation_metrics = {
                     str(row["Metric"]): float(row["Value"])
                     for _, row in metrics_df.iterrows()
                 }
+
         except (OSError, ValueError, TypeError) as error:
             st.warning(f"Saved model metrics could not be read: {error}")
 
@@ -604,6 +632,7 @@ def show_dashboard():
 
     if model_error:
         st.error(f"Random Forest model could not be loaded: {model_error}")
+
     if dataset_error:
         st.error(f"Processed test dataset could not be loaded: {dataset_error}")
 
@@ -649,7 +678,9 @@ def show_dashboard():
 
     if evaluation_metrics:
         st.subheader("Saved Model Performance")
+
         metric_columns = st.columns(len(evaluation_metrics))
+
         for column, (metric, value) in zip(
             metric_columns, evaluation_metrics.items()
         ):
@@ -694,12 +725,25 @@ def show_dashboard():
 
 if st.session_state.authenticated:
     page = st.navigation(
-        [st.Page(show_dashboard, title="Predictive Maintenance", default=True)],
+        [
+            st.Page(
+                show_dashboard,
+                title="Predictive Maintenance",
+                default=True
+            )
+        ],
         position="hidden",
     )
+
 else:
     page = st.navigation(
-        [st.Page(show_authentication, title="Login", default=True)],
+        [
+            st.Page(
+                show_authentication,
+                title="Login",
+                default=True
+            )
+        ],
         position="hidden",
     )
 

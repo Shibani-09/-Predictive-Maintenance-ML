@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from passlib.context import CryptContext
 from pymongo.errors import DuplicateKeyError
 
-from services.database import get_users_collection
+from streamlit_app.services.database import get_users_collection
 
 
 # Password hashing configuration
@@ -61,8 +61,10 @@ def register_user(full_name, email, password):
 
     except DuplicateKeyError as error:
         key_pattern = (error.details or {}).get("keyPattern")
+
         if key_pattern == {"normalized_email": 1}:
             return False, "An account with this email already exists."
+
         raise
 
 
@@ -100,7 +102,7 @@ def authenticate_user(email, password):
 
         return False, f"Invalid password. {3 - attempts} attempts remaining.", None
 
-    # Reset failed attempts after successful login
+    # Reset failed login attempts after successful login
     collection.update_one(
         {"_id": user["_id"]},
         {
@@ -114,4 +116,3 @@ def authenticate_user(email, password):
         "full_name": user.get("full_name", ""),
         "email": user.get("email", "")
     }
-

@@ -5,7 +5,7 @@ import re
 import matplotlib.pyplot as plt
 import streamlit as st
 
-from services.ml_service import (
+from streamlit_app.services.ml_service import (
     get_available_engines,
     load_uploaded_sensor_csv,
     load_test_dataset,
