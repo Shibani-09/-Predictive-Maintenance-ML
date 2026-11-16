@@ -1,3 +1,4 @@
+import hashlib
 import math
 import re
 
@@ -6,8 +7,11 @@ import streamlit as st
 
 from services.ml_service import (
     get_available_engines,
+    load_uploaded_sensor_csv,
     load_test_dataset,
+    predict_uploaded_engines,
     predict_engine_rul,
+    validate_uploaded_sensor_data,
 )
 
 
@@ -22,12 +26,100 @@ def classify_engine_health(predicted_rul: float) -> tuple[str, str]:
     return "Healthy", "No immediate action indicated"
 
 
+def show_csv_upload_prediction() -> None:
+    st.subheader("Upload new engine sensor data")
+    st.caption(
+        "Upload a headered raw C-MAPSS CSV with engine IDs, cycles, settings, "
+        "and all 21 sensor columns. Each engine must include at least five "
+        "observations with consecutive latest cycles."
+    )
+    uploaded_file = st.file_uploader(
+        "Choose a raw sensor CSV file",
+        type=["csv"],
+        key="engine_prediction_csv_upload",
+    )
+
+    if uploaded_file is None:
+        return
+
+    content = uploaded_file.getvalue()
+    upload_signature = hashlib.sha256(content).hexdigest()
+    if st.session_state.get("uploaded_csv_signature") != upload_signature:
+        st.session_state.pop("uploaded_csv_prediction_results", None)
+        st.session_state["uploaded_csv_signature"] = upload_signature
+
+    try:
+        uploaded_data = load_uploaded_sensor_csv(uploaded_file.name, content)
+    except (OSError, RuntimeError, ValueError) as error:
+        st.error(f"The uploaded CSV could not be read: {error}")
+        return
+
+    st.caption(
+        f"Dataset preview · {len(uploaded_data):,} rows · "
+        f"{len(uploaded_data.columns):,} columns"
+    )
+    st.dataframe(
+        uploaded_data.head(10),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    try:
+        validated_data = validate_uploaded_sensor_data(uploaded_data)
+    except ValueError as error:
+        st.error(f"CSV validation failed: {error}")
+        return
+
+    st.success(
+        f"CSV validated: {validated_data['engine_id'].nunique()} engines "
+        f"and {len(validated_data):,} sensor records."
+    )
+
+    if st.button(
+        "Predict RUL for uploaded engines",
+        type="primary",
+        key="predict_uploaded_csv",
+    ):
+        try:
+            results = predict_uploaded_engines(validated_data)
+            classifications = results["predicted_rul"].apply(
+                classify_engine_health
+            )
+            results["health_status"] = classifications.apply(lambda value: value[0])
+            results["recommendation"] = classifications.apply(
+                lambda value: value[1]
+            )
+            st.session_state["uploaded_csv_prediction_results"] = results
+        except (OSError, RuntimeError, ValueError) as error:
+            st.session_state.pop("uploaded_csv_prediction_results", None)
+            st.error(f"Uploaded-data prediction failed: {error}")
+
+    results = st.session_state.get("uploaded_csv_prediction_results")
+    if results is not None:
+        st.subheader("Uploaded-data RUL predictions")
+        st.dataframe(
+            results,
+            use_container_width=True,
+            hide_index=True,
+        )
+        st.download_button(
+            "Download prediction results as CSV",
+            data=results.to_csv(index=False).encode("utf-8"),
+            file_name="uploaded_engine_rul_predictions.csv",
+            mime="text/csv",
+            key=f"download_uploaded_predictions_{upload_signature[:12]}",
+        )
+
+
 def show_engine_prediction() -> None:
     st.title("Engine Prediction")
     st.caption(
         "RUL predictions use the saved Random Forest model and the latest "
         "processed NASA C-MAPSS FD001 record for the selected engine."
     )
+
+    show_csv_upload_prediction()
+    st.divider()
 
     try:
         engine_ids = get_available_engines()
